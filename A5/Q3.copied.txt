@@ -1,0 +1,393 @@
+[11:30 AM, 3/13/2021] 👻: 176USD 239SGD
+[7:04 PM, 3/18/2021] 👻: #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define SIZE 200 //The number digit limitation
+
+typedef struct _btnode
+{
+    int item;
+    struct _btnode *left;
+    struct _btnode *right;
+} BTNode; // You should not change the definition of BTNode
+
+// since in there, we have no choice to declare the ExpType, the last four num of int is used to represent +-*/.
+typedef struct _node
+{
+    BTNode *item;
+    struct _node *next;
+} StackNode;
+
+typedef struct _stack
+{
+    int size;
+    StackNode *head;
+} Stack;
+
+void deleteTree(BTNode **root);
+
+void createExpTree(BTNode **root, char *prefix);
+void printTree(BTNode *node);
+void printTreePostfix(BTNode *node);
+double computeTree(BTNode *node);
+/**
+    Description of function insertBTNode
+
+    since in the declare of BTree has no function insertBTree,
+    we declare a function to insert node to the tree recursively.
+
+    @param node the address of the root node.
+
+    @param val the value need to be inserted into the tree.
+
+    @param puted mark whether put-ed.
+
+    @return void.
+*/
+void insertBTNode(BTNode **node, int val, int *puted);
+void push(Stack *sPtr, BTNode *item);
+int pop(Stack *sPtr);
+BTNode *peek(Stack s);
+int isEmptyStack(Stack s);
+/**
+    Description of function chartoint
+
+    since in the declare of BTree has no attribute ExpType,0x7fffff,0x7ffffe,0x7ffffd,0x7ffffc
+    represents + - * / respectively.
+
+    @param c the char that need to convet to int.
+
+    @return the int value of c.
+*/
+int chartoint(char c);
+/**
+    Description of function inttochar
+
+    since in the declare of BTree has no attribute ExpType,0x7fffff,0x7ffffe,0x7ffffd,0x7ffffc
+    represents + - * / respectively.
+
+    @param val the value that need to convet to char.
+
+    @return the char value of val. If none,'\0'
+*/
+char inttochar(int val);
+/**
+    Description of function ischar
+
+    since in the declare of BTree has no attribute ExpType,0x7fffff,0x7ffffe,0x7ffffd,0x7ffffc
+    represents + - * / respectively.
+
+    @param val the value that need to judge
+
+    @return if is char,1; 0,otherwise.
+*/
+int ischar(int val);
+int main()
+{
+    char prefix[SIZE];
+    BTNode *root = NULL;
+    //printf("Enter an prefix expression:\n");
+    gets(prefix);
+
+    createExpTree(&root, prefix);
+
+    // printf("The Infix Expression:\n");
+    printTree(root);
+    printf("\n");
+    // printf("The Postfix (Reverse Polish) Expression:\n");
+    printTreePostfix(root);
+    printf("\n");
+    // printf("Answer ");
+    printf("%.2f\n", computeTree(root));
+    deleteTree(&root);
+    return 0;
+}
+int chartoint(char c)
+{
+    if (c == '+')
+        return 0x7fffffff;
+    if (c == '-')
+        return 0x7ffffffe;
+    if (c == '*')
+        return 0x7ffffffd;
+    if (c == '/')
+        return 0x7ffffffc;
+}
+char inttochar(int val)
+{
+    if (val == 0x7fffffff)
+        return '+';
+    if (val == 0x7ffffffe)
+        return '-';
+    if (val == 0x7ffffffd)
+        return '*';
+    if (val == 0x7ffffffc)
+        return '/';
+    return 0;
+}
+int ischar(int val)
+{
+    if (val >= 0x7ffffffc && val <= 0x7fffffff)
+    {
+        return 1;
+    }
+    return 0;
+}
+void createExpTree(BTNode **root, char *prefix)
+{
+    //Write your code here
+    int l = strlen(prefix);
+    int i = 0;
+    // flag is used to record positive/negative
+    int val = 0, flag = 1;
+    int puted = 0;
+    int *p = &puted;
+    for (i = 0; i < l; i++)
+    {
+        if (prefix[i] == '+' || prefix[i] == '-' || prefix[i] == '*' || prefix[i] == '/')
+        {
+            // If the next prefix is neagtive 0-9
+            if (prefix[i] == '-' && prefix[i + 1] >= '0' && prefix[i + 1] <= '9')
+            {
+                // Mark flag become -1
+                flag = -1;
+                // Ignore the rest.
+                continue;
+            }
+
+            val = chartoint(prefix[i]);
+            puted = 0;
+            insertBTNode(root, flag * val, p);
+            flag = 1;
+        }
+        else if (prefix[i] == ' ')
+        {
+            // If got multiple spacing.. For my own Q2 output test and i am lazy to remove double spacing
+            if (i - 1 >= 0 && prefix[i - 1] == ' ')
+            {
+                continue;
+            }
+            if (!ischar(val))
+            {
+                puted = 0;
+                insertBTNode(root, flag * val, p);
+                flag = 1;
+            }
+            val = 0;
+        }
+        else
+        {
+            // Compute whole number
+            val = val * 10 + (prefix[i] - '0');
+        }
+    }
+    // The last element..
+    puted = 0;
+    insertBTNode(root, flag * val, p);
+}
+// 时刻按照先左后右的顺序插 先插满左孩子，再插右孩子
+void insertBTNode(BTNode **node, int val, int *puted)
+{
+    if (*puted)
+    {
+        return;
+    }
+    // printf("now at %p",node);
+    // char c =inttochar(val);
+    // is opeator
+    // printf("Insert %d\n",val);
+    // 如果自己都是空的 就放自己这
+    if (*node == NULL)
+    {
+        // puts("Get");
+        BTNode *newnode = malloc(sizeof(BTNode));
+        // printf("new add: %p\n",&newnode);
+        *node = newnode;
+        // printf("new add: %p\n",*node);
+        newnode->item = val;
+        newnode->left = NULL;
+        newnode->right = NULL;
+        // puts("???");
+        return;
+    }
+    else
+    {
+        BTNode *tmp = *node;
+        // 如果可以放左儿子，优先放左儿子
+        if (tmp->left == NULL && !(*puted))
+        {
+            // puts("PUTL");
+            BTNode *newnode = malloc(sizeof(BTNode));
+            newnode->item = val;
+            newnode->left = NULL;
+            newnode->right = NULL;
+            tmp->left = newnode;
+            *puted = 1;
+            // insertBTNode(&(tmp->left),val);
+            return;
+        }
+        // printf("CMP left = %c",c);
+        // if is operator, go to left continously
+        // printf("JUDGE L:%d\n",tmp->left->item);
+        if (ischar(tmp->left->item))
+        {
+            // printf("FIND L:%c,DFSL\n",inttochar(tmp->left->item));
+            insertBTNode(&(tmp->left), val, puted);
+            // puts("DFSL END");
+            if (*puted)
+                return;
+        }
+        // 否则再通过dfs右边的放右边的
+        if (tmp->right == NULL && !(*puted))
+        {
+            // puts("PUTR");
+            BTNode *newnode = malloc(sizeof(BTNode));
+            newnode->item = val;
+            newnode->left = NULL;
+            newnode->right = NULL;
+            tmp->right = newnode;
+            *puted = 1;
+            // insertBTNode(&(tmp->left),val);
+            return;
+        }
+        // if is operator, go to left continously
+        // printf("JUDGE R:%d\n",tmp->right->item);
+        if (ischar(tmp->right->item))
+        {
+            // printf("FIND R:%c\n",inttochar(tmp->right->item));
+            // puts("DFSR");
+            insertBTNode(&(tmp->right), val, puted);
+            if (*puted)
+                return;
+        }
+    }
+    return;
+}
+void printTree(BTNode *node)
+{
+    //Write your code here
+    if (node->left != NULL)
+    {
+        printTree(node->left);
+    }
+    if (ischar(node->item))
+    {
+        printf("%c ", inttochar(node->item));
+    }
+    else
+    {
+        printf("%d ", node->item);
+    }
+
+    if (node->right != NULL)
+    {
+        printTree(node->right);
+    }
+}
+
+void printTreePostfix(BTNode *node)
+{
+    //Write your code here
+    if (node->left != NULL)
+    {
+        printTreePostfix(node->left);
+    }
+    if (node->right != NULL)
+    {
+        printTreePostfix(node->right);
+    }
+    if (ischar(node->item))
+    {
+        printf("%c ", inttochar(node->item));
+    }
+    else
+    {
+        printf("%d ", node->item);
+    }
+}
+//使用递归来不断地合并子树
+double computeTree(BTNode *node)
+{
+    // 如果目前就是值，直接返回值
+    if (!ischar(node->item))
+    {
+        return 1.0 * node->item;
+    }
+    // 否则按照算式合并
+    double l_v = computeTree(node->left);
+    double r_v = computeTree(node->right);
+    char op = inttochar(node->item);
+    double ans;
+    if (op == '+')
+    {
+        ans = 1.0 * l_v + r_v;
+    }
+    else if (op == '-')
+    {
+        ans = 1.0 * l_v - r_v;
+    }
+    else if (op == '*')
+    {
+        ans = 1.0 * l_v * r_v;
+    }
+    else
+    {
+        ans = 1.0 * l_v / r_v;
+    }
+    // 合并一下item的值
+    node->item = (double)ans;
+    return ans;
+}
+
+void push(Stack *sPtr, BTNode *item)
+{
+    StackNode *newNode;
+    newNode = malloc(sizeof(StackNode));
+    newNode->item = item;
+    newNode->next = sPtr->head;
+    sPtr->head = newNode;
+    sPtr->size++;
+}
+
+int pop(Stack *sPtr)
+{
+    if (sPtr == NULL || sPtr->head == NULL)
+    {
+        return 0;
+    }
+    else
+    {
+        StackNode *temp = sPtr->head;
+        sPtr->head = sPtr->head->next;
+        free(temp);
+        sPtr->size--;
+        return 1;
+    }
+}
+
+BTNode *peek(Stack s)
+{
+    return s.head->item;
+}
+
+int isEmptyStack(Stack s)
+{
+    if (s.size == 0)
+        return 1;
+    else
+        return 0;
+}
+
+void deleteTree(BTNode **root)
+{
+    BTNode *temp;
+    if (*root != NULL)
+    {
+        temp = (*root)->right;
+        deleteTree(&((*root)->left));
+        free(*root);
+        *root = NULL;
+        deleteTree(&temp);
+    }
+}
